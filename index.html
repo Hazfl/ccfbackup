@@ -854,9 +854,10 @@
         <span>스탠딩 이미지 중복 줄이기 (같은 이미지는 파일에 한 번만 저장하고 나머지는 불러와서 써요 · 파일 용량이 훨씬 작아지지만, 스크립트를 걸러내는 블로그에 직접 붙여넣으면 이미지가 안 보일 수 있어요 · 파일로 저장/재업로드용으로 추천)</span>
       </label>
       <button class="btn btn-primary" id="exportBtn" disabled>HTML로 내보내기</button>
-      <div id="exportFallback" style="display:none; margin-top:6px;">
-        <a id="exportFallbackLink" href="#" target="_blank" class="display-reset-link">다운로드가 시작되지 않으면 여기를 눌러 새 탭에서 열기 → Ctrl+S로 저장</a>
+      <div id="exportFallback" style="margin-top:6px; font-size:11px; color:var(--text-faint);">
+        내보내기가 안 되면 → <a id="exportFallbackLink" href="#" target="_blank" class="display-reset-link">여기를 눌러 새 탭에서 열기</a> (새 탭에서 Ctrl+S로 저장)
       </div>
+      <div style="margin-top:8px; font-size:10px; color:var(--text-faint); opacity:.6;">편집기 버전: 2026-09-16-c</div>
       <div class="btn-row">
         <button class="btn btn-ghost" id="resetBtn">초기화</button>
       </div>
@@ -2413,8 +2414,8 @@
       document.body.removeChild(a);
 
       // 크롬/엣지가 "일반적으로 다운로드되지 않는 파일" 등의 이유로 다운로드를 조용히 막는
-      // 경우가 있어서, 항상 새 탭에서 열 수 있는 대체 링크도 같이 보여줍니다. (주소창 오른쪽
-      // 다운로드 아이콘에 "차단됨" 표시가 있는지도 확인해보세요.) 다음 내보내기 전까지는
+      // 경우가 있어서, 항상 보이는 새 탭 열기 링크에도 같은 파일 주소를 걸어둡니다. (주소창
+      // 오른쪽 다운로드 아이콘에 "차단됨" 표시가 있는지도 확인해보세요.) 다음 내보내기 전까지는
       // 이 링크가 계속 쓰일 수 있어서 바로 지우지 않습니다.
       var fallback = document.getElementById('exportFallback');
       var fallbackLink = document.getElementById('exportFallbackLink');
@@ -2422,7 +2423,6 @@
       fallbackLink.href = url;
       fallbackLink.setAttribute('download', filename);
       fallback.dataset.prevUrl = url;
-      fallback.style.display = 'block';
     } catch (err) {
       alert('내보내기 중 문제가 생겼어요: ' + (err && err.message ? err.message : err));
     }
