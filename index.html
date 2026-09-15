@@ -849,6 +849,10 @@
 
     </div>
     <div class="sidebar-foot">
+      <label class="section-hint" style="display:flex; align-items:flex-start; gap:5px; cursor:pointer; margin-bottom:4px;">
+        <input type="checkbox" id="dedupImagesCheck" style="margin-top:2px;" />
+        <span>스탠딩 이미지 중복 줄이기 (같은 이미지는 파일에 한 번만 저장하고 나머지는 불러와서 써요 · 파일 용량이 훨씬 작아지지만, 스크립트를 걸러내는 블로그에 직접 붙여넣으면 이미지가 안 보일 수 있어요 · 파일로 저장/재업로드용으로 추천)</span>
+      </label>
       <button class="btn btn-primary" id="exportBtn" disabled>HTML로 내보내기</button>
       <div class="btn-row">
         <button class="btn btn-ghost" id="resetBtn">초기화</button>
@@ -1034,8 +1038,20 @@
     return m ? m[1] : null;
   }
 
+  // 이미지 중복 줄이기로 내보낸 파일에는 <script id="avatarSrcData"> 안에 이미지 목록이
+  // JSON으로 한 번씩만 들어있고, 각 줄은 data-avatar-idx로 그 목록의 몇 번째 이미지인지만 가리킵니다.
+  function extractAvatarSrcList(doc){
+    var el = doc.getElementById('avatarSrcData');
+    if (!el) return null;
+    try {
+      var list = JSON.parse(el.textContent);
+      return Array.isArray(list) ? list : null;
+    } catch (err) { return null; }
+  }
+
   function parseLogHtmlOwnExport(doc){
     var avatarMap = extractAvatarSrcMap(doc);
+    var avatarSrcList = extractAvatarSrcList(doc);
     var rows = doc.querySelectorAll('.msg-row, .divider-row');
     var out = [];
     rows.forEach(function(row){
@@ -1076,12 +1092,17 @@
       var avatarDiv = row.querySelector('.avatar');
       var avatarSrc = null;
       if (avatarDiv) {
-        var am = avatarDiv.className.match(/avatar-image-(\d+)/);
-        if (am && avatarMap[am[1]]) {
-          avatarSrc = avatarMap[am[1]];
+        var idxAttr = avatarDiv.getAttribute('data-avatar-idx');
+        if (idxAttr !== null && avatarSrcList && avatarSrcList[+idxAttr]) {
+          avatarSrc = avatarSrcList[+idxAttr];
         } else {
-          var imgEl = avatarDiv.querySelector('img');
-          if (imgEl && imgEl.getAttribute('src')) avatarSrc = imgEl.getAttribute('src');
+          var am = avatarDiv.className.match(/avatar-image-(\d+)/);
+          if (am && avatarMap[am[1]]) {
+            avatarSrc = avatarMap[am[1]];
+          } else {
+            var imgEl = avatarDiv.querySelector('img');
+            if (imgEl && imgEl.getAttribute('src')) avatarSrc = imgEl.getAttribute('src');
+          }
         }
       }
       if (avatarSrc) entry._avatarSrc = avatarSrc;
@@ -1332,7 +1353,7 @@
   function renderTabChips(){
     var wrap = document.getElementById('tabChips');
     var keys = Object.keys(state.tabs);
-    document.getElementById('tabSection').style.display = keys.length > 1 ? 'block' : 'none';
+    document.getElementById('tabSection').style.display = keys.length > 0 ? 'block' : 'none';
     wrap.innerHTML = '';
     keys.forEach(function(t){
       var row = document.createElement('div');
@@ -2271,28 +2292,41 @@
       .replace(/#topbar[\s\S]*?(?=#logScroll)/,'')
       .replace(/@media[\s\S]*$/,'');
 
-    // 같은 캐릭터 이미지를 대사마다 통째로 복사해 넣으면 파일이 매우 커지므로,
-    // 코코포리아 형식처럼 <style>에 .avatar-image-N 클래스로 한 번씩만 넣고 class만 참조합니다.
-    var avatarSrcIndex = {};
+    // 티스토리 등 블로그 에디터에 글을 붙여넣으면 <style> 안의 background-image:url(data:...)는
+    // 보안상 걸러지고 사라지는 경우가 많습니다 (그래서 스탠딩 이미지만 안 보이는 문제가 생김).
+    // 반면 <img src="data:...">는 거의 모든 블로그 에디터에서 그대로 살아남기 때문에, 기본값은
+    // 파일 용량이 좀 커지더라도 아바타를 각 대사에 <img>로 직접 넣는 방식입니다.
+    // 체크박스로 "중복 줄이기"를 켜면 코코포리아 원본 방식처럼 이미지를 <style>에 한 번씩만 심고
+    // 각 줄에서는 avatar-image-N 클래스로 참조합니다 (파일은 훨씬 작아지지만 블로그 붙여넣기엔 부적합).
+    // 체크박스를 켜면, 이미지 데이터를 <style>이 아니라 화면에 안 보이는 <script> 데이터 하나에
+    // 한 번씩만 저장해두고, 각 대사 줄은 그 인덱스만 가지고 있다가 페이지가 열릴 때 스크립트가
+    // "함수처럼" 그 인덱스에 맞는 이미지를 찾아 그 자리에 넣어줍니다 (실제 이미지 데이터는 파일 안에
+    // 캐릭터당 1번씩만 존재). 다만 스크립트 실행이 필요해서, <script>를 걸러내는 블로그 에디터에
+    // 붙여넣으면 이미지가 안 보일 수 있어요 — 그런 경우엔 체크를 끄고 대사마다 직접 넣는 방식을 쓰세요.
+    var dedupImages = !!(document.getElementById('dedupImagesCheck') && document.getElementById('dedupImagesCheck').checked);
     var avatarSrcList = [];
-    visible.forEach(function(e){
-      if (e.type !== 'msg') return;
-      var p = getEntryPortrait(e);
-      if (p && !(p.src in avatarSrcIndex)) {
-        avatarSrcIndex[p.src] = avatarSrcList.length;
-        avatarSrcList.push(p.src);
-      }
-    });
-    var avatarCss = avatarSrcList.map(function(src, i){
-      return '.avatar-image-' + i + '{background-image:url("' + src + '");background-size:cover;background-position:top center;}';
-    }).join('\n');
+    var avatarIndexMap = new Map();
+    function getAvatarIdx(src){
+      if (avatarIndexMap.has(src)) return avatarIndexMap.get(src);
+      var idx = avatarSrcList.length;
+      avatarSrcList.push(src);
+      avatarIndexMap.set(src, idx);
+      return idx;
+    }
 
     var body = visible.map(function(e){
       if (e.type === 'divider') {
         return '<div class="divider-row"><div class="divider-line-wrap"><div class="line"></div><div class="tag">' + escapeHtml(e.label) + '</div><div class="line"></div></div></div>';
       }
       var portrait = getEntryPortrait(e);
-      var avatarClass = portrait ? (' avatar-image-' + avatarSrcIndex[portrait.src]) : '';
+      var avatarInner;
+      if (!portrait) {
+        avatarInner = '';
+      } else if (dedupImages) {
+        avatarInner = '';
+      } else {
+        avatarInner = '<img src="'+portrait.src+'" alt="" />';
+      }
       var plain = e.html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g,'');
       var rollish = isRollLine(plain);
       var rollResult = rollish ? classifyRollResult(plain) : null;
@@ -2307,8 +2341,9 @@
       var textStyle = descType !== 'off' ? (' style="color:'+e.color+'"') :
         (!rollish && state.tabTextColors[e.tab] ? (' style="color:'+state.tabTextColors[e.tab]+'"') : '');
       var displayHtml = (rollish || descType !== 'off') ? e.html : applyColorRules(e.html);
+      var avatarAttr = (dedupImages && portrait) ? (' data-avatar-idx="' + getAvatarIdx(portrait.src) + '"') : '';
       return '<div class="'+rowClass+'"'+rowAttrs+'>' +
-        '<div class="avatar'+avatarClass+'"></div>' +
+        '<div class="avatar"'+avatarAttr+'>'+avatarInner+'</div>' +
         '<div class="msg-body">' +
           '<div class="msg-meta">'+nameHtml+'</div>' +
           namedPrefix +
@@ -2336,12 +2371,27 @@
 
     var fontLinkTag = state.fontEmbedUrl ? ('<link rel="stylesheet" href="' + state.fontEmbedUrl + '"/>') : '';
 
+    var avatarLoaderScript = '';
+    if (avatarSrcList.length) {
+      var avatarDataJson = JSON.stringify(avatarSrcList).replace(/<\/script/gi, '<\\/script');
+      avatarLoaderScript =
+        '<scr' + 'ipt type="application/json" id="avatarSrcData">' + avatarDataJson + '<' + '/script>' +
+        '<scr' + 'ipt>(function(){' +
+          'var d=document.getElementById("avatarSrcData"); if(!d) return;' +
+          'var list; try{ list=JSON.parse(d.textContent); }catch(e){ return; }' +
+          'document.querySelectorAll("[data-avatar-idx]").forEach(function(el){' +
+            'var i=+el.getAttribute("data-avatar-idx");' +
+            'if(list[i]){ var img=document.createElement("img"); img.src=list[i]; img.alt=""; el.appendChild(img); }' +
+          '});' +
+        '})();<' + '/script>';
+    }
+
     return '<!DOCTYPE html>\n<html lang="ko"><head><meta charset="UTF-8"/>' +
       '<meta name="viewport" content="width=device-width, initial-scale=1.0"/>' +
       '<title>' + escapeHtml(title) + '</title>' +
       fontLinkTag +
-      '<style>' + css + '\nbody{overflow:auto;display:block;}#logScroll{height:auto;}#logInner{max-width:720px;margin:0 auto;padding:20px 20px 80px;}\n' + avatarCss + '\n' + rootOverride + '</style>' +
-      '</head><body><div id="logScroll"><div id="logInner' + (innerClass?'" class="'+innerClass.trim():'') + '">' + body + '</div></div></body></html>';
+      '<style>' + css + '\nbody{overflow:auto;display:block;}#logScroll{height:auto;}#logInner{max-width:720px;margin:0 auto;padding:20px 20px 80px;}\n' + rootOverride + '</style>' +
+      '</head><body><div id="logScroll"><div id="logInner' + (innerClass?'" class="'+innerClass.trim():'') + '">' + body + '</div></div>' + avatarLoaderScript + '</body></html>';
   }
 
   document.getElementById('exportBtn').onclick = function(){
