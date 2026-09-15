@@ -1065,9 +1065,9 @@
         return;
       }
 
-      var tab = row.getAttribute('data-tab') || 'main';
+      var tab = row.getAttribute('data-t') || row.getAttribute('data-tab') || 'main';
       var isNarration = row.classList.contains('is-narration');
-      var descType = row.getAttribute('data-desc') ||
+      var descType = row.getAttribute('data-d') || row.getAttribute('data-desc') ||
         (row.classList.contains('is-desc') ? (row.querySelector('.desc-name-prefix') ? 'named' : 'basic') : 'off');
 
       var nameEl = row.querySelector('.msg-name');
@@ -1075,7 +1075,7 @@
       var name = nameEl ? (nameEl.textContent || '').trim() :
         (descPrefixEl ? (descPrefixEl.textContent || '').trim() : '');
 
-      var color = row.getAttribute('data-color') ||
+      var color = row.getAttribute('data-c') || row.getAttribute('data-color') ||
         extractInlineColor(nameEl) || extractInlineColor(descPrefixEl) || '#9aa0ff';
 
       var textEl = row.querySelector('.msg-text');
@@ -1118,6 +1118,31 @@
   // 코코포리아 로그에 이미 박혀있던 스탠딩 이미지를 캐릭터별 포트레잇 목록으로 자동 등록합니다.
   // 같은 캐릭터가 로그 중간에 다른 이미지로 바뀌면(avatar-image 인덱스가 달라지면) 그 대사부터
   // 새 포트레잇으로 지정되어, 기존의 "이 대사부터 스탠딩 교체" 기능이 그대로 이어집니다.
+  // 캐릭터 스탠딩으로 올린 이미지가 화면에 보이는 크기(사이드바 썸네일 36px, 대사 옆 44px,
+  // 확대보기 최대 640px)보다 훨씬 큰 경우가 많아서(폰 사진 등), 파일에 저장하기 전에 적당한
+  // 해상도로 줄여서 파일 용량을 크게 줄입니다. 투명 배경이 깨지지 않도록 PNG로 유지합니다.
+  function resizeImageDataUrl(dataUrl, maxDim, cb){
+    var img = new Image();
+    img.onload = function(){
+      var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+      if (!w || !h || (w <= maxDim && h <= maxDim)) { cb(dataUrl); return; }
+      var scale = Math.min(maxDim / w, maxDim / h);
+      var nw = Math.max(1, Math.round(w * scale));
+      var nh = Math.max(1, Math.round(h * scale));
+      try {
+        var canvas = document.createElement('canvas');
+        canvas.width = nw; canvas.height = nh;
+        canvas.getContext('2d').drawImage(img, 0, 0, nw, nh);
+        var resized = canvas.toDataURL('image/png');
+        cb(resized.length < dataUrl.length ? resized : dataUrl);
+      } catch (err) {
+        cb(dataUrl);
+      }
+    };
+    img.onerror = function(){ cb(dataUrl); };
+    img.src = dataUrl;
+  }
+
   function hydratePortraitsFromAvatarSrc(entries){
     entries.forEach(function(e){
       if (e.type !== 'msg' || !e._avatarSrc) return;
@@ -1317,9 +1342,11 @@
         var f = inp.files[0]; if (!f) return;
         var reader = new FileReader();
         reader.onload = function(){
-          portrait.src = reader.result;
-          closePortraitPicker();
-          renderCharList(); renderLog();
+          resizeImageDataUrl(reader.result, 640, function(finalSrc){
+            portrait.src = finalSrc;
+            closePortraitPicker();
+            renderCharList(); renderLog();
+          });
         };
         reader.readAsDataURL(f);
       };
@@ -1615,11 +1642,13 @@
           var f = inp.files[0]; if (!f) return;
           var reader = new FileReader();
           reader.onload = function(){
-            var label = c.portraits.length === 0 ? '기본' : ('표정' + (c.portraits.length+1));
-            var pid = 'p' + Math.random().toString(36).slice(2,9);
-            c.portraits.push({ id: pid, label: label, src: reader.result });
-            if (!c.activeId) c.activeId = pid;
-            renderCharList(); renderLog();
+            resizeImageDataUrl(reader.result, 640, function(finalSrc){
+              var label = c.portraits.length === 0 ? '기본' : ('표정' + (c.portraits.length+1));
+              var pid = 'p' + Math.random().toString(36).slice(2,9);
+              c.portraits.push({ id: pid, label: label, src: finalSrc });
+              if (!c.activeId) c.activeId = pid;
+              renderCharList(); renderLog();
+            });
           };
           reader.readAsDataURL(f);
         };
@@ -2291,10 +2320,20 @@
     var title = document.getElementById('titleInput').value.trim() || '세션 로그';
     var visible = state.entries.filter(function(e){ return e.type==='divider' || state.tabs[e.tab] !== false; });
 
-    var css = document.querySelector('style').textContent
+    // 내보낸 파일에 항상 똑같이 들어가는 스타일 코드라서, 주석과 여백을 없애서 줄여둡니다
+    // (로그 길이와 무관하게 파일마다 고정으로 붙는 용량이라 줄여두면 항상 이득이에요).
+    function minifyCss(s){
+      return s
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\s+/g, ' ')
+        .replace(/\s*([{}:;,])\s*/g, '$1')
+        .replace(/;}/g, '}')
+        .trim();
+    }
+    var css = minifyCss(document.querySelector('style').textContent
       .replace(/#sidebar[\s\S]*?(?=\/\* ---------- Main)/,'')
       .replace(/#topbar[\s\S]*?(?=#logScroll)/,'')
-      .replace(/@media[\s\S]*$/,'');
+      .replace(/@media[\s\S]*$/,''));
 
     // 티스토리 등 블로그 에디터에 글을 붙여넣으면 <style> 안의 background-image:url(data:...)는
     // 보안상 걸러지고 사라지는 경우가 많습니다 (그래서 스탠딩 이미지만 안 보이는 문제가 생김).
@@ -2338,7 +2377,7 @@
       var isSystem = !!(e.name && e.name.trim().toLowerCase() === 'system');
       var rowClass = 'msg-row' + (e.isNarration ? ' is-narration' : '') + (descType !== 'off' ? ' is-desc' : '') + (isSystem ? ' is-system' : '');
       var rowStyle = state.tabColors[e.tab] ? (' style="background:'+state.tabColors[e.tab]+'"') : '';
-      var rowAttrs = ' data-tab="'+escapeHtml(e.tab || 'main')+'" data-color="'+escapeHtml(e.color)+'" data-desc="'+descType+'"'+rowStyle;
+      var rowAttrs = ' data-t="'+escapeHtml(e.tab || 'main')+'" data-c="'+escapeHtml(e.color)+'" data-d="'+descType+'"'+rowStyle;
       var textClass = 'msg-text' + (rollish ? ' roll' : '') + (rollResult ? ' roll-' + rollResult : '');
       var nameHtml = e.name ? ('<span class="msg-name" style="color:'+e.color+'">'+escapeHtml(e.name)+'</span>') : '';
       var namedPrefix = (descType === 'named' && e.name) ? ('<span class="desc-name-prefix" style="color:'+e.color+'">'+escapeHtml(e.name)+' </span>') : '';
