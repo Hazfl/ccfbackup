@@ -233,11 +233,11 @@
   .char-name-row .cname{
     font-size:13px; font-weight:600;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    outline:none; cursor:text; border-radius:3px; padding:0 2px;
+    outline:none; cursor:text; border-radius:3px; padding:0 2px; margin:0 -2px;
   }
   .char-name-row .cname:focus{
-    background:rgba(255,255,255,.06);
-    white-space:normal; word-break:break-all; overflow:visible;
+    overflow:visible; white-space:normal; word-break:break-all;
+    background:rgba(255,255,255,.08);
   }
   .char-name-row .ccount{font-size:11px; color:var(--text-faint); white-space:nowrap;}
   .char-control-row{
@@ -275,7 +275,7 @@
   }
   .portrait-item{
     position:relative; width:36px; height:36px; border-radius:0;
-    overflow:hidden; cursor:pointer; border:2px solid transparent;
+    overflow:hidden; cursor:zoom-in; border:2px solid transparent;
     background:var(--avatar-blank);
   }
   .portrait-item.active{border-color:var(--accent-strong);}
@@ -284,6 +284,33 @@
     position:absolute; top:-4px; right:-4px; width:14px; height:14px;
     background:var(--danger); border-radius:50%; font-size:9px; color:#fff;
     display:flex; align-items:center; justify-content:center; line-height:1;
+    z-index:2;
+  }
+  .portrait-item-actions{
+    position:absolute; left:0; right:0; bottom:0;
+    display:flex; justify-content:center; gap:5px;
+    padding:2px 0;
+    background:rgba(0,0,0,.6);
+    opacity:0; transition:opacity .12s;
+  }
+  .portrait-item:hover .portrait-item-actions{opacity:1;}
+  .portrait-item-actions button{
+    background:none; border:none; color:#fff; font-size:10px; cursor:pointer; padding:0 2px; line-height:1.4;
+  }
+  .portrait-item-actions button:hover{color:var(--accent-strong);}
+  .portrait-item-actions button.star.active{color:#ffd54a;}
+  .image-lightbox-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.78);
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+    z-index:200; cursor:zoom-out; padding:40px;
+  }
+  .image-lightbox-img{
+    max-width:min(90vw,640px); max-height:80vh; object-fit:contain;
+    border-radius:8px; box-shadow:0 16px 48px rgba(0,0,0,.6);
+    background:var(--avatar-blank);
+  }
+  .image-lightbox-caption{
+    margin-top:14px; color:#fff; font-size:13px; opacity:.85; text-align:center;
   }
   .portrait-label{
     font-size:9.5px; color:var(--text-faint);
@@ -353,8 +380,12 @@
     margin-right:4px;
   }
   .tab-color-clear:hover{color:var(--danger);}
-  .tab-del-btn{margin-left:auto; font-size:11px;}
-  .tab-del-btn:hover{color:var(--danger);}
+  .tab-remove-btn{
+    font-size:10.5px; color:var(--text-faint); background:var(--bg-panel-2);
+    border:1px solid var(--border-soft); border-radius:6px; cursor:pointer;
+    padding:3px 7px; flex-shrink:0; margin-left:auto;
+  }
+  .tab-remove-btn:hover{color:#fff; background:var(--danger); border-color:var(--danger);}
 
   .empty-hint{
     font-size:12px; color:var(--text-faint); line-height:1.6;
@@ -486,6 +517,28 @@
   .portrait-picker-item:hover{background:rgba(255,255,255,.07);}
   .portrait-picker-item.sel{background:rgba(255,255,255,.1); color:var(--accent-strong); font-weight:600;}
   .portrait-picker-item img{width:28px; height:28px; border-radius:0; object-fit:cover; object-position:top center; flex-shrink:0; background:var(--avatar-blank);}
+  .portrait-picker-item span.plabel{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .portrait-picker-zoom{
+    margin-left:auto; flex-shrink:0; opacity:.55; font-size:11px; padding:2px 3px;
+  }
+  .portrait-picker-zoom:hover{opacity:1; color:var(--accent-strong);}
+  .portrait-edit-popover{padding:4px;}
+  .portrait-edit-popover .peb{
+    display:block; width:100%; text-align:left;
+    background:none; border:none; color:var(--text);
+    font-size:12px; padding:7px 8px; border-radius:6px; cursor:pointer;
+  }
+  .portrait-edit-popover .peb:hover{background:rgba(255,255,255,.07);}
+  .portrait-edit-popover .pe-url-row{display:flex; gap:5px; padding:6px 4px 2px;}
+  .portrait-edit-popover .pe-url-row input{
+    flex:1; min-width:0; background:var(--bg-log); border:1px solid var(--border-soft);
+    border-radius:6px; color:var(--text); font-size:11.5px; padding:6px 7px; outline:none;
+  }
+  .portrait-edit-popover .pe-url-row button{
+    background:var(--bg-panel-2); border:1px solid var(--border-soft); color:var(--text-dim);
+    border-radius:6px; font-size:11.5px; padding:6px 9px; cursor:pointer; flex-shrink:0;
+  }
+  .portrait-edit-popover .pe-url-row button:hover{color:var(--accent-strong); border-color:var(--accent);}
   .portrait-picker-clear{
     border-top:1px solid var(--border-soft); margin-top:2px; padding-top:8px;
     color:var(--text-faint); font-size:11px;
@@ -663,7 +716,7 @@
         <div class="upload-box" id="uploadBox">
           <div class="upload-icon">＋</div>
           <div class="upload-main">HTML 로그 파일을 올려주세요</div>
-          <div class="upload-sub">코코포리아에서 출력한 .html (최신/예전 형식 모두), 또는 이 편집기로 예전에 내보낸 로그 파일 · 클릭 또는 드래그</div>
+          <div class="upload-sub">코코포리아에서 출력한 .html (최신/예전 형식 모두) · 클릭 또는 드래그</div>
         </div>
         <input type="file" id="fileInput" accept=".html,.htm" multiple />
         <div id="fileChips"></div>
@@ -851,29 +904,20 @@
   var idSeq = 1;
   function nextId(){ return 'e' + (idSeq++); }
 
-  // 로그 파일 형식은 두 가지를 지원합니다:
+  // 로그 파일 형식은 세 가지를 지원합니다:
   // 1) 예전 코코포리아 내보내기 형식: <p style="color:..."><span>[탭]</span><span>이름</span><span>대사</span></p>
   // 2) 최신 코코포리아 내보내기 형식: <article class="message"><span class="avatar avatar-image-N">...
   //    이름/색상/탭/다이스결과/아바타 이미지가 article 안에 구조화되어 들어있음
-  // 파일을 열어보고 <article class="message">가 있으면 최신 형식으로, 없으면 예전 형식으로 파싱합니다.
+  // 3) 이 편집기로 내보낸(HTML로 내보내기) 세션 로그: <div class="msg-row">...
+  //    한 번 내보낸 로그를 다시 올려서 이어서 수정할 수 있도록 함
+  // 파일을 열어보고 구조를 보고 자동으로 알맞은 파서로 분기합니다.
   function parseLogHtml(text){
     var doc = new DOMParser().parseFromString(text, 'text/html');
-    // 이 편집기로 내보낸 파일을 다시 불러오는 경우: 내보낼 때 함께 심어둔 원본 데이터(JSON)가
-    // 있으면 그걸로 완벽하게 복원합니다 (탭/캐릭터/스탠딩/색상 규칙 전부 그대로 이어서 수정 가능).
-    var stateEl = doc.getElementById('editorStateData');
-    if (stateEl) {
-      try {
-        var snap = JSON.parse(stateEl.textContent);
-        return { __ownExport: true, snapshot: snap };
-      } catch (err) { /* 파싱 실패하면 아래 형식들로 계속 시도 */ }
-    }
     if (doc.querySelector('article.message')) {
       return parseLogHtmlCocofolia(doc);
     }
-    // 원본 데이터 없이 이 편집기로 내보낸 "보기 전용" 로그 파일(과거 버전으로 내보낸 파일 등):
-    // 화면에 보이는 마크업(.msg-row/.divider-row)에서 최대한 복원해서 이어서 수정할 수 있게 합니다.
-    if (doc.querySelector('.msg-row') || doc.querySelector('.divider-row')) {
-      return parseLogHtmlExported(doc);
+    if (doc.querySelector('.msg-row, .divider-row')) {
+      return parseLogHtmlOwnExport(doc);
     }
     return parseLogHtmlLegacy(doc);
   }
@@ -980,72 +1024,43 @@
     return out;
   }
 
-  // "rgb(r,g,b)" / "#rrggbb" 등 색 문자열을 6자리 hex로 통일합니다. 브라우저가 style 속성을
-  // 읽을 때 rgb() 형태로 정규화해서 돌려주는 경우가 있어서 필요합니다.
-  function colorStrToHex(s){
-    if (!s) return null;
-    s = s.trim();
-    var hex = normalizeHex(s);
-    if (hex) return hex;
-    var m = s.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
-    if (!m) return null;
-    var toHex2 = function(n){ n = Math.max(0, Math.min(255, +n)); var h = n.toString(16); return h.length < 2 ? '0'+h : h; };
-    return '#' + toHex2(m[1]) + toHex2(m[2]) + toHex2(m[3]);
-  }
-
-  function extractColorFromEl(el){
+  // 이 편집기가 만든 내보내기 HTML(.msg-row 구조)을 다시 불러와 이어서 수정할 수 있게 합니다.
+  // 새로 내보낸 파일은 data-tab/data-color 속성이 있어 탭과 색상까지 완전히 복원되고,
+  // 예전에 내보낸 파일(그 속성이 없는 경우)은 이름표에 남은 색상 정보와 탭 없이(기본 탭으로) 복원됩니다.
+  function extractInlineColor(el){
     if (!el) return null;
     var styleAttr = el.getAttribute('style') || '';
-    var m = styleAttr.match(/(?:^|;)\s*color:\s*(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))/i);
-    if (m) return colorStrToHex(m[1]) || m[1];
-    return colorStrToHex(el.style ? el.style.color : '');
+    var m = styleAttr.match(/color:\s*(#[0-9a-fA-F]{3,8})/);
+    return m ? m[1] : null;
   }
 
-  // msg-row에 걸려있던 배경색(탭별 배경색 설정으로 심어진 것)을 읽어옵니다.
-  function extractBgFromEl(el){
-    if (!el) return null;
-    var styleAttr = el.getAttribute('style') || '';
-    var m = styleAttr.match(/background(?:-color)?:\s*(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))/i);
-    if (m) return colorStrToHex(m[1]) || m[1];
-    return colorStrToHex(el.style ? el.style.backgroundColor : '');
-  }
-
-  // 이 편집기로 예전에 내보낸(원본 데이터 없이, 화면용 마크업만 있는) 파일을 다시 불러올 때 쓰는
-  // 파서입니다. 탭 구분은 내보낼 때 이미 사라져 있어서 전부 "main" 탭 하나로 합쳐서 복원하고,
-  // 이름 · 대사 · 색상 · 나레이션/설명문 여부 · 스탠딩 이미지는 최대한 그대로 되살립니다.
-  function parseLogHtmlExported(doc){
-    var out = [];
-    // 탭 이름 자체는 내보낼 때 사라지지만, 탭마다 지정했던 배경색은 각 대사 줄에 그대로
-    // 남아있어서, 같은 배경색끼리 다시 하나의 탭으로 묶어 배경색 설정을 복원합니다.
-    var bgTabMap = {};
-    var tabCounter = 1;
+  function parseLogHtmlOwnExport(doc){
+    var avatarMap = extractAvatarSrcMap(doc);
     var rows = doc.querySelectorAll('.msg-row, .divider-row');
+    var out = [];
     rows.forEach(function(row){
       if (row.classList.contains('divider-row')) {
         var tagEl = row.querySelector('.tag');
         out.push({ id: nextId(), type: 'divider', label: tagEl ? (tagEl.textContent || '').trim() : '' });
         return;
       }
-      var isNarrationRow = row.classList.contains('is-narration');
-      var isDescRow = row.classList.contains('is-desc');
+
+      var tab = row.getAttribute('data-tab') || 'main';
+      var isNarration = row.classList.contains('is-narration');
+      var descType = row.getAttribute('data-desc') ||
+        (row.classList.contains('is-desc') ? (row.querySelector('.desc-name-prefix') ? 'named' : 'basic') : 'off');
+
       var nameEl = row.querySelector('.msg-name');
       var descPrefixEl = row.querySelector('.desc-name-prefix');
-      var name = nameEl ? (nameEl.textContent || '').trim() : (descPrefixEl ? (descPrefixEl.textContent || '').trim() : '');
-      var color = extractColorFromEl(nameEl) || extractColorFromEl(descPrefixEl) || '#9aa0ff';
-      var textEl = row.querySelector('.msg-text');
-      var html = textEl ? stripColorRuleSpans(textEl.innerHTML.trim()) : '&nbsp;';
-      var descType = 'off';
-      if (isDescRow) descType = descPrefixEl ? 'named' : 'basic';
-      var avatarImg = row.querySelector('.avatar img');
-      var avatarSrc = avatarImg ? avatarImg.getAttribute('src') : null;
-      if (!name && !html.trim()) return;
+      var name = nameEl ? (nameEl.textContent || '').trim() :
+        (descPrefixEl ? (descPrefixEl.textContent || '').trim() : '');
 
-      var bg = extractBgFromEl(row);
-      var tab = 'main';
-      if (bg) {
-        if (!bgTabMap[bg]) bgTabMap[bg] = '불러온탭' + (tabCounter++);
-        tab = bgTabMap[bg];
-      }
+      var color = row.getAttribute('data-color') ||
+        extractInlineColor(nameEl) || extractInlineColor(descPrefixEl) || '#9aa0ff';
+
+      var textEl = row.querySelector('.msg-text');
+      var html = textEl ? stripColorRuleSpans(textEl.innerHTML.trim()) : '';
+      if (!name && !html) return;
 
       var entry = {
         id: nextId(),
@@ -1054,16 +1069,24 @@
         name: name,
         color: color,
         html: html || '&nbsp;',
-        isNarration: isNarrationRow || !name,
+        isNarration: isNarration,
         portraitId: null,
         descType: descType
       };
+      var avatarDiv = row.querySelector('.avatar');
+      var avatarSrc = null;
+      if (avatarDiv) {
+        var am = avatarDiv.className.match(/avatar-image-(\d+)/);
+        if (am && avatarMap[am[1]]) {
+          avatarSrc = avatarMap[am[1]];
+        } else {
+          var imgEl = avatarDiv.querySelector('img');
+          if (imgEl && imgEl.getAttribute('src')) avatarSrc = imgEl.getAttribute('src');
+        }
+      }
       if (avatarSrc) entry._avatarSrc = avatarSrc;
       out.push(entry);
     });
-    var tabColorMap = {};
-    Object.keys(bgTabMap).forEach(function(bg){ tabColorMap[bgTabMap[bg]] = bg; });
-    out.__tabColorMap = tabColorMap;
     return out;
   }
 
@@ -1118,29 +1141,6 @@
       counts[e.name] = (counts[e.name] || 0) + 1;
     });
     state.characters.__counts = counts;
-  }
-
-  // 캐릭터 이름을 바꿉니다. 이미 다른 이름으로 바꾼 결과가 기존 캐릭터와 같아지면(오타 정리 등)
-  // 두 캐릭터를 하나로 합칩니다 — 스탠딩 이미지는 중복 없이 합쳐지고, 대표 이미지는 기존 것을 우선합니다.
-  function renameCharacter(oldName, newName){
-    var oldChar = state.characters[oldName];
-    if (!oldChar) return;
-    if (state.characters[newName] && newName !== oldName) {
-      var target = state.characters[newName];
-      (oldChar.portraits || []).forEach(function(p){
-        var dup = target.portraits.some(function(tp){ return tp.src === p.src; });
-        if (!dup) target.portraits.push(p);
-      });
-      if (!target.activeId && oldChar.activeId) target.activeId = oldChar.activeId;
-    } else {
-      state.characters[newName] = oldChar;
-    }
-    delete state.characters[oldName];
-    state.entries.forEach(function(e){
-      if (e.type === 'msg' && e.name === oldName) e.name = newName;
-    });
-    renderCharList();
-    renderLog();
   }
 
   function rebuildTabs(){
@@ -1211,8 +1211,13 @@
       var opt = document.createElement('div');
       opt.className = 'portrait-picker-item' + (selectedId === it.id ? ' sel' : '');
       var img = document.createElement('img'); img.src = it.src;
-      var lbl = document.createElement('span'); lbl.textContent = it.label;
-      opt.appendChild(img); opt.appendChild(lbl);
+      var lbl = document.createElement('span'); lbl.className = 'plabel'; lbl.textContent = it.label;
+      var zoomBtn = document.createElement('span');
+      zoomBtn.className = 'portrait-picker-zoom';
+      zoomBtn.textContent = '🔍';
+      zoomBtn.title = '크게 보기';
+      zoomBtn.onclick = function(ev){ ev.stopPropagation(); openImageLightbox(it.src, it.label); };
+      opt.appendChild(img); opt.appendChild(lbl); opt.appendChild(zoomBtn);
       opt.onclick = function(){
         onPick(it);
         closePortraitPicker();
@@ -1246,10 +1251,88 @@
       '여기서 지정 해제 (윗줄 이미지 이어받기)');
   }
 
+  // 표정/스탠딩 이미지를 크게 볼 수 있는 라이트박스
+  function openImageLightbox(src, label){
+    var overlay = document.createElement('div');
+    overlay.className = 'image-lightbox-overlay';
+    var img = document.createElement('img');
+    img.className = 'image-lightbox-img';
+    img.src = src;
+    overlay.appendChild(img);
+    if (label) {
+      var cap = document.createElement('div');
+      cap.className = 'image-lightbox-caption';
+      cap.textContent = label;
+      overlay.appendChild(cap);
+    }
+    function close(){
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      document.removeEventListener('keydown', onKey);
+    }
+    function onKey(ev){ if (ev.key === 'Escape') close(); }
+    overlay.onclick = close;
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+  }
+
+  // 기존 스탠딩 이미지를 다른 이미지(파일 업로드 또는 URL)로 바꿉니다.
+  // 코코포리아에서 가져온 base64 이미지를 가벼운 이미지 링크로 바꾸고 싶을 때도 여기서 URL을 붙여넣으면 됩니다.
+  function openImageEditPopover(anchorEl, portrait){
+    closePortraitPicker();
+    var pop = document.createElement('div');
+    pop.className = 'portrait-picker portrait-edit-popover';
+
+    var uploadBtn = document.createElement('button');
+    uploadBtn.className = 'peb';
+    uploadBtn.textContent = '파일에서 이미지 바꾸기';
+    uploadBtn.onclick = function(){
+      var inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*';
+      inp.onchange = function(){
+        var f = inp.files[0]; if (!f) return;
+        var reader = new FileReader();
+        reader.onload = function(){
+          portrait.src = reader.result;
+          closePortraitPicker();
+          renderCharList(); renderLog();
+        };
+        reader.readAsDataURL(f);
+      };
+      inp.click();
+    };
+    pop.appendChild(uploadBtn);
+
+    var urlRow = document.createElement('div');
+    urlRow.className = 'pe-url-row';
+    var urlInput = document.createElement('input');
+    urlInput.type = 'text';
+    urlInput.placeholder = '이미지 URL로 바꾸기';
+    urlInput.value = /^https?:\/\//i.test(portrait.src) ? portrait.src : '';
+    var urlBtn = document.createElement('button');
+    urlBtn.textContent = '적용';
+    function applyUrl(){
+      var url = urlInput.value.trim();
+      if (!url) return;
+      portrait.src = url;
+      closePortraitPicker();
+      renderCharList(); renderLog();
+    }
+    urlBtn.onclick = applyUrl;
+    urlInput.onkeydown = function(ev){ if (ev.key === 'Enter') applyUrl(); };
+    urlRow.appendChild(urlInput);
+    urlRow.appendChild(urlBtn);
+    pop.appendChild(urlRow);
+
+    document.body.appendChild(pop);
+    positionPopoverAt(pop, anchorEl);
+    activePicker = pop;
+    setTimeout(function(){ document.addEventListener('mousedown', onPickerOutsideClick, true); }, 0);
+  }
+
   function renderTabChips(){
     var wrap = document.getElementById('tabChips');
     var keys = Object.keys(state.tabs);
-    document.getElementById('tabSection').style.display = keys.length > 0 ? 'block' : 'none';
+    document.getElementById('tabSection').style.display = keys.length > 1 ? 'block' : 'none';
     wrap.innerHTML = '';
     keys.forEach(function(t){
       var row = document.createElement('div');
@@ -1257,8 +1340,8 @@
 
       var chip = document.createElement('div');
       chip.className = 'tab-chip' + (state.tabs[t] ? ' active' : '');
-      chip.textContent = '[' + t + ']';
-      chip.title = '체크하면 이 탭의 대사가 로그에 표시돼요';
+      chip.textContent = '[' + t + ']' + (state.tabs[t] ? '' : ' (숨김)');
+      chip.title = '클릭하면 이 탭의 대사를 로그에 표시하거나 숨겨요 (삭제되지 않아요)';
       chip.onclick = function(){
         state.tabs[t] = !state.tabs[t];
         renderTabChips();
@@ -1320,13 +1403,13 @@
       };
       row.appendChild(textClearBtn);
 
-      var delTabBtn = document.createElement('button');
-      delTabBtn.className = 'tab-color-clear tab-del-btn';
-      delTabBtn.textContent = '🗑';
-      delTabBtn.title = '이 탭 삭제 (탭에 속한 대사가 전부 함께 삭제돼요)';
-      delTabBtn.onclick = function(){
-        var msgCount = state.entries.filter(function(e){ return e.type === 'msg' && e.tab === t; }).length;
-        if (!confirm('탭 [' + t + ']을(를) 삭제할까요?\n이 탭의 대사 ' + msgCount + '개가 함께 사라져요. 되돌릴 수 없어요.')) return;
+      var removeBtn = document.createElement('button');
+      removeBtn.className = 'tab-remove-btn';
+      removeBtn.textContent = '탭 삭제';
+      removeBtn.title = '이 탭과 이 탭에 속한 대사를 전부 삭제해요 (되돌릴 수 없어요)';
+      removeBtn.onclick = function(){
+        var count = state.entries.filter(function(e){ return e.type === 'msg' && e.tab === t; }).length;
+        if (!confirm('"' + t + '" 탭과 그 안의 대사 ' + count + '개를 전부 삭제할까요? 되돌릴 수 없어요.')) return;
         state.entries = state.entries.filter(function(e){ return !(e.type === 'msg' && e.tab === t); });
         delete state.tabs[t];
         delete state.tabColors[t];
@@ -1335,7 +1418,7 @@
         renderCharList();
         renderLog();
       };
-      row.appendChild(delTabBtn);
+      row.appendChild(removeBtn);
 
       wrap.appendChild(row);
     });
@@ -1370,18 +1453,28 @@
       var cname = document.createElement('div');
       cname.className = 'cname';
       cname.style.color = c.color;
-      cname.textContent = name;
       cname.contentEditable = 'true';
       cname.spellcheck = false;
-      cname.title = '클릭해서 캐릭터 이름 수정 (이 캐릭터의 모든 대사에 한번에 반영돼요)';
-      cname.onkeydown = function(ev){
-        if (ev.key === 'Enter') { ev.preventDefault(); cname.blur(); }
-      };
-      cname.onblur = function(){
-        var newName = cname.textContent.trim();
+      cname.textContent = name;
+      cname.title = '클릭해서 캐릭터 이름을 바꿀 수 있어요 (이 캐릭터의 모든 대사에 한번에 적용돼요)';
+      function commitCharRename(){
+        var newName = (cname.textContent || '').trim();
         if (!newName || newName === name) { cname.textContent = name; return; }
-        renameCharacter(name, newName);
-      };
+        if (state.characters[newName]) {
+          alert('"' + newName + '" 이름은 이미 다른 캐릭터가 쓰고 있어요. 다른 이름을 입력해주세요.');
+          cname.textContent = name;
+          return;
+        }
+        state.characters[newName] = c;
+        delete state.characters[name];
+        state.entries.forEach(function(e){ if (e.type === 'msg' && e.name === name) e.name = newName; });
+        renderCharList();
+        renderLog();
+      }
+      cname.addEventListener('blur', commitCharRename);
+      cname.addEventListener('keydown', function(ev){
+        if (ev.key === 'Enter') { ev.preventDefault(); cname.blur(); }
+      });
       var ccount = document.createElement('div');
       ccount.className = 'ccount';
       ccount.textContent = (state.characters.__counts[name] || 0) + '개 대사';
@@ -1448,8 +1541,24 @@
         var item = document.createElement('div');
         item.className = 'portrait-item' + (p.id === c.activeId ? ' active' : '');
         var img = document.createElement('img'); img.src = p.src; item.appendChild(img);
-        item.title = '클릭하면 대표 이미지로 사용돼요';
-        item.onclick = function(){ c.activeId = p.id; renderCharList(); renderLog(); };
+        item.title = '클릭하면 크게 볼 수 있어요';
+        item.onclick = function(){ openImageLightbox(p.src, name + ' · ' + p.label); };
+
+        var actions = document.createElement('div');
+        actions.className = 'portrait-item-actions';
+        var starBtn = document.createElement('button');
+        starBtn.className = 'star' + (p.id === c.activeId ? ' active' : '');
+        starBtn.textContent = '★';
+        starBtn.title = '대표 이미지로 사용 (사이드바 썸네일)';
+        starBtn.onclick = function(ev){ ev.stopPropagation(); c.activeId = p.id; renderCharList(); renderLog(); };
+        actions.appendChild(starBtn);
+        var editBtn = document.createElement('button');
+        editBtn.textContent = '✎';
+        editBtn.title = '이미지 바꾸기 (파일 업로드 또는 URL)';
+        editBtn.onclick = function(ev){ ev.stopPropagation(); openImageEditPopover(editBtn, p); };
+        actions.appendChild(editBtn);
+        item.appendChild(actions);
+
         var rm = document.createElement('div');
         rm.className = 'rm'; rm.textContent = '×';
         rm.onclick = function(ev){
@@ -2078,50 +2187,6 @@
   };
   renderColorRuleList();
 
-  // 이 편집기에서 내보낸 파일(원본 데이터 포함)을 다시 불러올 때, 그 안에 저장된 캐릭터/탭/
-  // 스탠딩/색상 규칙을 지금 편집 중인 상태에 안전하게 합쳐 넣습니다. id가 겹치지 않도록
-  // 전부 새 id로 다시 부여합니다.
-  function mergeOwnExportSnapshot(snap){
-    var entries = snap.entries || [];
-    entries.forEach(function(e){ e.id = nextId(); });
-
-    Object.keys(snap.characters || {}).forEach(function(name){
-      if (name === '__counts') return;
-      var c = snap.characters[name] || { color: '#9aa0ff', portraits: [], activeId: null };
-      var pidMap = {};
-      (c.portraits || []).forEach(function(p){
-        var oldPid = p.id;
-        p.id = 'p' + Math.random().toString(36).slice(2, 9);
-        pidMap[oldPid] = p.id;
-      });
-      if (c.activeId && pidMap[c.activeId]) c.activeId = pidMap[c.activeId];
-      entries.forEach(function(e){
-        if (e.type === 'msg' && e.name === name && e.portraitId && pidMap[e.portraitId]) {
-          e.portraitId = pidMap[e.portraitId];
-        }
-      });
-      if (!state.characters[name]) {
-        state.characters[name] = c;
-      } else {
-        var target = state.characters[name];
-        (c.portraits || []).forEach(function(p){
-          var dup = target.portraits.some(function(tp){ return tp.src === p.src; });
-          if (!dup) target.portraits.push(p);
-        });
-        if (!target.activeId && c.activeId) target.activeId = c.activeId;
-      }
-    });
-
-    Object.keys(snap.tabs || {}).forEach(function(t){ if (!(t in state.tabs)) state.tabs[t] = snap.tabs[t]; });
-    Object.keys(snap.tabColors || {}).forEach(function(t){ if (!(t in state.tabColors)) state.tabColors[t] = snap.tabColors[t]; });
-    Object.keys(snap.tabTextColors || {}).forEach(function(t){ if (!(t in state.tabTextColors)) state.tabTextColors[t] = snap.tabTextColors[t]; });
-    if ((!state.colorRules || !state.colorRules.length) && snap.colorRules && snap.colorRules.length) {
-      state.colorRules = snap.colorRules;
-    }
-
-    state.entries = state.entries.concat(entries);
-  }
-
   function handleFiles(files){
     var arr = Array.prototype.slice.call(files);
     var pending = arr.length;
@@ -2129,17 +2194,8 @@
       var reader = new FileReader();
       reader.onload = function(){
         var parsed = parseLogHtml(reader.result);
-        if (parsed && parsed.__ownExport) {
-          mergeOwnExportSnapshot(parsed.snapshot);
-        } else {
-          hydratePortraitsFromAvatarSrc(parsed);
-          if (parsed.__tabColorMap) {
-            Object.keys(parsed.__tabColorMap).forEach(function(t){
-              if (!(t in state.tabColors)) state.tabColors[t] = parsed.__tabColorMap[t];
-            });
-          }
-          state.entries = state.entries.concat(parsed);
-        }
+        hydratePortraitsFromAvatarSrc(parsed);
+        state.entries = state.entries.concat(parsed);
         state.fileNames.push(file.name);
         pending--;
         if (pending === 0) {
@@ -2215,12 +2271,28 @@
       .replace(/#topbar[\s\S]*?(?=#logScroll)/,'')
       .replace(/@media[\s\S]*$/,'');
 
+    // 같은 캐릭터 이미지를 대사마다 통째로 복사해 넣으면 파일이 매우 커지므로,
+    // 코코포리아 형식처럼 <style>에 .avatar-image-N 클래스로 한 번씩만 넣고 class만 참조합니다.
+    var avatarSrcIndex = {};
+    var avatarSrcList = [];
+    visible.forEach(function(e){
+      if (e.type !== 'msg') return;
+      var p = getEntryPortrait(e);
+      if (p && !(p.src in avatarSrcIndex)) {
+        avatarSrcIndex[p.src] = avatarSrcList.length;
+        avatarSrcList.push(p.src);
+      }
+    });
+    var avatarCss = avatarSrcList.map(function(src, i){
+      return '.avatar-image-' + i + '{background-image:url("' + src + '");background-size:cover;background-position:top center;}';
+    }).join('\n');
+
     var body = visible.map(function(e){
       if (e.type === 'divider') {
         return '<div class="divider-row"><div class="divider-line-wrap"><div class="line"></div><div class="tag">' + escapeHtml(e.label) + '</div><div class="line"></div></div></div>';
       }
       var portrait = getEntryPortrait(e);
-      var avatarInner = portrait ? '<img src="'+portrait.src+'" />' : '';
+      var avatarClass = portrait ? (' avatar-image-' + avatarSrcIndex[portrait.src]) : '';
       var plain = e.html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g,'');
       var rollish = isRollLine(plain);
       var rollResult = rollish ? classifyRollResult(plain) : null;
@@ -2228,14 +2300,15 @@
       var isSystem = !!(e.name && e.name.trim().toLowerCase() === 'system');
       var rowClass = 'msg-row' + (e.isNarration ? ' is-narration' : '') + (descType !== 'off' ? ' is-desc' : '') + (isSystem ? ' is-system' : '');
       var rowStyle = state.tabColors[e.tab] ? (' style="background:'+state.tabColors[e.tab]+'"') : '';
+      var rowAttrs = ' data-tab="'+escapeHtml(e.tab || 'main')+'" data-color="'+escapeHtml(e.color)+'" data-desc="'+descType+'"'+rowStyle;
       var textClass = 'msg-text' + (rollish ? ' roll' : '') + (rollResult ? ' roll-' + rollResult : '');
       var nameHtml = e.name ? ('<span class="msg-name" style="color:'+e.color+'">'+escapeHtml(e.name)+'</span>') : '';
       var namedPrefix = (descType === 'named' && e.name) ? ('<span class="desc-name-prefix" style="color:'+e.color+'">'+escapeHtml(e.name)+' </span>') : '';
       var textStyle = descType !== 'off' ? (' style="color:'+e.color+'"') :
         (!rollish && state.tabTextColors[e.tab] ? (' style="color:'+state.tabTextColors[e.tab]+'"') : '');
       var displayHtml = (rollish || descType !== 'off') ? e.html : applyColorRules(e.html);
-      return '<div class="'+rowClass+'"'+rowStyle+'>' +
-        '<div class="avatar">' + avatarInner + '</div>' +
+      return '<div class="'+rowClass+'"'+rowAttrs+'>' +
+        '<div class="avatar'+avatarClass+'"></div>' +
         '<div class="msg-body">' +
           '<div class="msg-meta">'+nameHtml+'</div>' +
           namedPrefix +
@@ -2263,34 +2336,12 @@
 
     var fontLinkTag = state.fontEmbedUrl ? ('<link rel="stylesheet" href="' + state.fontEmbedUrl + '"/>') : '';
 
-    // 이 파일을 나중에 다시 이 편집기에 올리면 그대로 이어서 수정할 수 있도록, 편집 중이던
-    // 원본 데이터(엔트리/캐릭터/탭/색상 규칙)를 화면에 보이지 않는 JSON으로 함께 심어둡니다.
-    var charactersSnapshot = {};
-    Object.keys(state.characters).forEach(function(k){
-      if (k === '__counts') return;
-      charactersSnapshot[k] = state.characters[k];
-    });
-    var entriesSnapshot = state.entries.map(function(e){
-      if (e.type === 'divider') return { id: e.id, type: 'divider', label: e.label };
-      return { id: e.id, type: 'msg', tab: e.tab, name: e.name, color: e.color, html: e.html, isNarration: e.isNarration, portraitId: e.portraitId, descType: e.descType };
-    });
-    var stateSnapshot = {
-      entries: entriesSnapshot,
-      characters: charactersSnapshot,
-      tabs: state.tabs,
-      tabColors: state.tabColors,
-      tabTextColors: state.tabTextColors,
-      colorRules: state.colorRules
-    };
-    var stateJson = JSON.stringify(stateSnapshot).replace(/<\/script/gi, '<\\/script');
-    var stateScriptTag = '<scr' + 'ipt type="application/json" id="editorStateData">' + stateJson + '<' + '/script>';
-
     return '<!DOCTYPE html>\n<html lang="ko"><head><meta charset="UTF-8"/>' +
       '<meta name="viewport" content="width=device-width, initial-scale=1.0"/>' +
       '<title>' + escapeHtml(title) + '</title>' +
       fontLinkTag +
-      '<style>' + css + '\nbody{overflow:auto;display:block;}#logScroll{height:auto;}#logInner{max-width:720px;margin:0 auto;padding:20px 20px 80px;}\n' + rootOverride + '</style>' +
-      '</head><body><div id="logScroll"><div id="logInner' + (innerClass?'" class="'+innerClass.trim():'') + '">' + body + '</div></div>' + stateScriptTag + '</body></html>';
+      '<style>' + css + '\nbody{overflow:auto;display:block;}#logScroll{height:auto;}#logInner{max-width:720px;margin:0 auto;padding:20px 20px 80px;}\n' + avatarCss + '\n' + rootOverride + '</style>' +
+      '</head><body><div id="logScroll"><div id="logInner' + (innerClass?'" class="'+innerClass.trim():'') + '">' + body + '</div></div></body></html>';
   }
 
   document.getElementById('exportBtn').onclick = function(){
