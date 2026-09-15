@@ -854,6 +854,9 @@
         <span>스탠딩 이미지 중복 줄이기 (같은 이미지는 파일에 한 번만 저장하고 나머지는 불러와서 써요 · 파일 용량이 훨씬 작아지지만, 스크립트를 걸러내는 블로그에 직접 붙여넣으면 이미지가 안 보일 수 있어요 · 파일로 저장/재업로드용으로 추천)</span>
       </label>
       <button class="btn btn-primary" id="exportBtn" disabled>HTML로 내보내기</button>
+      <div id="exportFallback" style="display:none; margin-top:6px;">
+        <a id="exportFallbackLink" href="#" target="_blank" class="display-reset-link">다운로드가 시작되지 않으면 여기를 눌러 새 탭에서 열기 → Ctrl+S로 저장</a>
+      </div>
       <div class="btn-row">
         <button class="btn btn-ghost" id="resetBtn">초기화</button>
       </div>
@@ -2395,17 +2398,34 @@
   }
 
   document.getElementById('exportBtn').onclick = function(){
-    var html = buildExportHtml();
-    var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    var title = document.getElementById('titleInput').value.trim() || 'log';
-    a.href = url;
-    a.download = title.replace(/[\\/:*?"<>|]/g,'_') + '.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      var html = buildExportHtml();
+      var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var title = document.getElementById('titleInput').value.trim() || 'log';
+      var filename = title.replace(/[\\/:*?"<>|]/g,'_') + '.html';
+
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      // 크롬/엣지가 "일반적으로 다운로드되지 않는 파일" 등의 이유로 다운로드를 조용히 막는
+      // 경우가 있어서, 항상 새 탭에서 열 수 있는 대체 링크도 같이 보여줍니다. (주소창 오른쪽
+      // 다운로드 아이콘에 "차단됨" 표시가 있는지도 확인해보세요.) 다음 내보내기 전까지는
+      // 이 링크가 계속 쓰일 수 있어서 바로 지우지 않습니다.
+      var fallback = document.getElementById('exportFallback');
+      var fallbackLink = document.getElementById('exportFallbackLink');
+      if (fallback.dataset.prevUrl) URL.revokeObjectURL(fallback.dataset.prevUrl);
+      fallbackLink.href = url;
+      fallbackLink.setAttribute('download', filename);
+      fallback.dataset.prevUrl = url;
+      fallback.style.display = 'block';
+    } catch (err) {
+      alert('내보내기 중 문제가 생겼어요: ' + (err && err.message ? err.message : err));
+    }
   };
 
   var sidebarEl = document.getElementById('sidebar');
